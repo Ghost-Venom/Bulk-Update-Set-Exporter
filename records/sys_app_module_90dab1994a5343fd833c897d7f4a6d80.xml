@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update sys_domain="global" table="sys_app_module">
+    <sys_app_module action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <application display_value="System Update Sets">a02b3c250a0a0b50000cc3543c6e463a</application>
+        <assessment/>
+        <device_type/>
+        <filter/>
+        <hint>Bulk export update sets to XML files</hint>
+        <homepage/>
+        <image/>
+        <link_type>DIRECT</link_type>
+        <map_page/>
+        <mobile_title/>
+        <mobile_view_name/>
+        <name/>
+        <order>100</order>
+        <override_menu_roles>false</override_menu_roles>
+        <query>x_1404459_bulk_upd_sys_update_set_export_view.do</query>
+        <report/>
+        <require_confirmation>false</require_confirmation>
+        <roles>admin</roles>
+        <sys_class_name>sys_app_module</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-02-19 16:16:08</sys_created_on>
+        <sys_domain>global</sys_domain>
+        <sys_domain_path>/</sys_domain_path>
+        <sys_id>90dab1994a5343fd833c897d7f4a6d80</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>Bulk Export View</sys_name>
+        <sys_overrides/>
+        <sys_package display_value="Bulk Update" source="x_1404459_bulk_upd">3ba1f7d3c3833210a8797b2ed40131d7</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Bulk Update">3ba1f7d3c3833210a8797b2ed40131d7</sys_scope>
+        <sys_update_name>sys_app_module_90dab1994a5343fd833c897d7f4a6d80</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-02-19 16:16:08</sys_updated_on>
+        <timeline_page/>
+        <title>Bulk Export View</title>
+        <uncancelable>false</uncancelable>
+        <view_name/>
+        <window_name/>
+    </sys_app_module>
+</record_update>

@@ -1,0 +1,18 @@
+{
+  "name": "bulk-update-set-exporter",
+  "version": "0.2.3",
+  "description": "ServiceNow scoped app for bulk-exporting update sets. Distributed as an importable Update Set XML.",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build.js",
+    "package": "node scripts/build.js && node scripts/package.js",
+    "release": "npm run package"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "jszip": "^3.10.1"
+  }
+}

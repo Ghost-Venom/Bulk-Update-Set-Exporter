@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_security_acl">
+    <sys_security_acl action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <admin_overrides>true</admin_overrides>
+        <advanced>false</advanced>
+        <applies_to/>
+        <condition/>
+        <controlled_by_refs/>
+        <decision_type>allow</decision_type>
+        <description>Allow admin users to read update sets for bulk export functionality</description>
+        <local_or_existing>Local</local_or_existing>
+        <name>sys_update_set</name>
+        <operation display_value="read">read</operation>
+        <script/>
+        <security_attribute/>
+        <sys_class_name>sys_security_acl</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-02-19 16:16:56</sys_created_on>
+        <sys_id>2873322c786940a0ae31af977922b424</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>sys_update_set</sys_name>
+        <sys_package display_value="Bulk Update" source="x_1404459_bulk_upd">3ba1f7d3c3833210a8797b2ed40131d7</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Bulk Update">3ba1f7d3c3833210a8797b2ed40131d7</sys_scope>
+        <sys_update_name>sys_security_acl_2873322c786940a0ae31af977922b424</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-02-19 16:16:56</sys_updated_on>
+        <type display_value="record">record</type>
+    </sys_security_acl>
+</record_update>
