@@ -258,10 +258,11 @@ function buildRemoteUpdateSet(remoteUpdateSetSysId, name) {
     const ARCHIVE_DIR = path.join(RELEASES_DIR, 'archive');
     fs.mkdirSync(ARCHIVE_DIR, { recursive: true });
 
-    // Move any existing release XMLs into the archive folder so only
-    // the current release lives at the root of releases/.
+    // Move any existing release XMLs for older versions into the archive
+    // folder so only the current release lives at the root of releases/.
+    const currentXml = `BulkUpdateSetExporter-${VERSION}.xml`;
     for (const f of fs.readdirSync(RELEASES_DIR)) {
-        if (f.endsWith('.xml')) {
+        if (f.endsWith('.xml') && f !== currentXml) {
             const oldPath = path.join(RELEASES_DIR, f);
             const newPath = path.join(ARCHIVE_DIR, f);
             if (!fs.existsSync(newPath)) {
