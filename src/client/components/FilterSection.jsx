@@ -3,10 +3,6 @@ import { UpdateSetService } from '../services/UpdateSetService.js';
 import './FilterSection.css';
 
 export default function FilterSection({ filters, setFilters, onSearch, onClear, isSearching }) {
-    const [stateChoices, setStateChoices] = useState([]);
-    const [userSearch, setUserSearch] = useState('');
-    const [users, setUsers] = useState([]);
-    const [selectedUser, setSelectedUser] = useState(null);
     const service = new UpdateSetService();
 
     useEffect(() => {
