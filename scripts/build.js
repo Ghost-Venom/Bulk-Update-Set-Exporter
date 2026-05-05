@@ -1,4 +1,4 @@
-// Bundle the React app into a single ES-module main.js suitable for the
+// Bundle the React app into a single ES-module main.js for ServiceNow.
 // ServiceNow sys_ux_lib_asset attachment. CSS imports are injected at runtime
 // via a tiny plugin so the output mirrors the Vite-built original (single file,
 // styles in <head>, no separate .css asset).

@@ -48,3 +48,4 @@ To bump the version, edit `package.json` — `scripts/package.js` rewrites the e
 ## License
 
 [MIT](LICENSE) — see file for terms.
+
