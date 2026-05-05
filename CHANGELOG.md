@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.1
+
+### Fixed
+- **Import with parent update set now keeps each source set as a separate child record instead of merging into one.** The previous version flattened all selected update sets into a single merged `sys_remote_update_set`. Now a parent `sys_remote_update_set` is created first, then each selected source set is imported as its own child linked via the `<parent>` field. ServiceNow's native cascade will preview/commit all children when the parent is previewed/committed.
+
+## 0.3.0
+
+### Added
+- **Import tab.** Upload a ZIP previously exported by this tool and load its update sets directly into the instance's Retrieved Update Sets — no manual "Import XML" required for each file.
+- **Selectable import list.** After uploading a ZIP, each contained update set is listed with its name, application, customer-update count, and created-by. Select which ones to import (all selected by default).
+- **Batch parent update set.** Optionally create a parent `sys_remote_update_set` that wraps all imported update sets as children, so you can Preview and Commit the entire batch in one step from Retrieved Update Sets.
+- **Re-import support.** Importing the same ZIP a second time updates existing records in place (PUT → POST fallback) rather than creating duplicates.
+
 ## 0.2.3
 
 ### Fixed

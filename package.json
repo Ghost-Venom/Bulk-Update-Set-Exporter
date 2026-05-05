@@ -1,6 +1,6 @@
 {
   "name": "bulk-update-set-exporter",
-  "version": "0.2.3",
+  "version": "0.3.1",
   "description": "ServiceNow scoped app for bulk-exporting update sets. Distributed as an importable Update Set XML.",
   "license": "MIT",
   "private": true,

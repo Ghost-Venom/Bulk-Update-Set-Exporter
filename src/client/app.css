@@ -172,3 +172,47 @@
     background-color: #007acc;
     transition: width 0.3s ease;
 }
+
+.tab-bar {
+    display: flex;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #ddd;
+}
+
+.tab {
+    background: none;
+    border: none;
+    padding: 10px 24px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #666;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+}
+
+.tab:hover {
+    color: #333;
+}
+
+.tab.active {
+    color: #333;
+    border-bottom-color: #007acc;
+    font-weight: 600;
+}
+
+.drop-zone {
+    border: 2px dashed #ccc;
+    border-radius: 6px;
+    padding: 40px;
+    text-align: center;
+    cursor: pointer;
+    color: #666;
+    transition: border-color 0.2s, color 0.2s;
+    user-select: none;
+}
+
+.drop-zone:hover,
+.drop-zone.drag-over {
+    border-color: #007acc;
+    color: #007acc;
+}

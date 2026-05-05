@@ -49,6 +49,8 @@ const TYPE_MAP = {
     sys_security_acl_role: 'ACL Role',
     sys_scope_privilege: 'Application Cross-Scope Privilege',
     sys_ux_lib_asset: 'UX Library Asset',
+    sys_ws_definition: 'Scripted REST Service',
+    sys_ws_operation: 'Scripted REST Resource',
 };
 
 function uuid() {

@@ -4,11 +4,13 @@ import FilterSection from './components/FilterSection.jsx';
 import ResultsSection from './components/ResultsSection.jsx';
 import ExportSection from './components/ExportSection.jsx';
 import ProgressModal from './components/ProgressModal.jsx';
+import ImportTab from './components/ImportTab.jsx';
 import './app.css';
 
 export default function App() {
     const service = useMemo(() => new UpdateSetService(), []);
-    
+    const [activeTab, setActiveTab] = useState('export');
+
     const [filters, setFilters] = useState({
         states: [],
         createdBy: '',
@@ -93,39 +95,62 @@ export default function App() {
             <div className="page-header">
                 <h1>Update Set Bulk Exporter</h1>
             </div>
-            
-            <FilterSection 
-                filters={filters}
-                setFilters={setFilters}
-                onSearch={handleSearch}
-                onClear={handleClearFilters}
-                isSearching={isSearching}
-            />
-            
-            {hasSearched && (
+
+            <div className="tab-bar">
+                <button
+                    className={activeTab === 'export' ? 'tab active' : 'tab'}
+                    onClick={() => setActiveTab('export')}
+                >
+                    Export
+                </button>
+                <button
+                    className={activeTab === 'import' ? 'tab active' : 'tab'}
+                    onClick={() => setActiveTab('import')}
+                >
+                    Import
+                </button>
+            </div>
+
+            {activeTab === 'export' && (
                 <>
-                    <ResultsSection 
-                        updateSets={updateSets}
-                        selectedUpdateSets={selectedUpdateSets}
-                        setSelectedUpdateSets={setSelectedUpdateSets}
-                        recordCount={recordCount}
-                        showWarning={showWarning}
+                    <FilterSection
+                        filters={filters}
+                        setFilters={setFilters}
+                        onSearch={handleSearch}
+                        onClear={handleClearFilters}
+                        isSearching={isSearching}
                     />
-                    
-                    <ExportSection 
-                        selectedCount={selectedUpdateSets.length}
-                        onExport={handleExport}
-                        isExporting={isExporting}
-                    />
+
+                    {hasSearched && (
+                        <>
+                            <ResultsSection
+                                updateSets={updateSets}
+                                selectedUpdateSets={selectedUpdateSets}
+                                setSelectedUpdateSets={setSelectedUpdateSets}
+                                recordCount={recordCount}
+                                showWarning={showWarning}
+                            />
+
+                            <ExportSection
+                                selectedCount={selectedUpdateSets.length}
+                                onExport={handleExport}
+                                isExporting={isExporting}
+                            />
+                        </>
+                    )}
+
+                    {isExporting && (
+                        <ProgressModal
+                            title="Exporting Update Sets"
+                            current={exportProgress.current}
+                            total={exportProgress.total}
+                        />
+                    )}
                 </>
             )}
-            
-            {isExporting && (
-                <ProgressModal 
-                    title="Exporting Update Sets"
-                    current={exportProgress.current}
-                    total={exportProgress.total}
-                />
+
+            {activeTab === 'import' && (
+                <ImportTab service={service} />
             )}
         </div>
     );

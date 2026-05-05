@@ -484,6 +484,253 @@ export class UpdateSetService {
         return String(filename || 'update_set').replace(/[/\\:*?"<>|]/g, '_');
     }
 
+    async parseExportZip(file) {
+        const zip = await JSZip.loadAsync(file);
+        const results = [];
+        for (const [filename, entry] of Object.entries(zip.files)) {
+            if (!filename.endsWith('.xml') || entry.dir) continue;
+            const text = await entry.async('text');
+            const parsed = this.parseUpdateSetXml(text, filename);
+            if (parsed) {
+                parsed.rawXml = text;
+                parsed.filename = filename;
+                results.push(parsed);
+            }
+        }
+        return results.sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    parseUpdateSetXml(xmlText, filename) {
+        const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
+        if (doc.querySelector('parsererror')) throw new Error(`XML parse error in ${filename}`);
+        const rus = doc.querySelector('sys_remote_update_set');
+        if (!rus) return null;
+
+        const t = tag => rus.querySelector(tag)?.textContent ?? '';
+        const updateXmls = [...doc.querySelectorAll('sys_update_xml')];
+
+        return {
+            name: t('name'),
+            application: rus.querySelector('application')?.getAttribute('display_value') ?? t('application_name'),
+            applicationScope: t('application_scope'),
+            remoteUpdateSetSysId: t('sys_id'),
+            remoteSysId: t('remote_sys_id'),
+            createdBy: t('sys_created_by'),
+            description: t('description'),
+            updateXmlCount: updateXmls.length,
+            updateXmlRecords: updateXmls.map(el => {
+                const f = tag => el.querySelector(tag)?.textContent ?? '';
+                return {
+                    sysId: f('sys_id'),
+                    name: f('name'),
+                    action: f('action') || 'INSERT_OR_UPDATE',
+                    application: f('application'),
+                    applicationDisplayValue: el.querySelector('application')?.getAttribute('display_value') ?? '',
+                    category: f('category') || 'customer',
+                    payload: f('payload'),
+                    payloadHash: f('payload_hash'),
+                    table: f('table'),
+                    targetName: f('target_name'),
+                    type: f('type'),
+                    updateGuid: f('update_guid'),
+                    updateDomain: f('update_domain') || 'global',
+                    view: f('view'),
+                    createdBy: f('sys_created_by') || 'admin',
+                    createdOn: f('sys_created_on'),
+                    updatedBy: f('sys_updated_by') || 'admin',
+                    updatedOn: f('sys_updated_on'),
+                };
+            }),
+        };
+    }
+
+    async importUpdateSets(parsedUpdateSets, progressCallback, { createParent, parentName }) {
+        if (createParent) {
+            const parentSysId = this.generateUUID();
+
+            // Build a single XML containing the parent and all children so
+            // ServiceNow processes them in one import transaction.
+            const batchXml = this.buildBatchXml(parsedUpdateSets, parentName, parentSysId);
+
+            progressCallback({ current: 0, total: parsedUpdateSets.length + 1, name: parentName });
+            try {
+                await this.uploadXml(batchXml, `${parentName}.xml`);
+                progressCallback({ current: parsedUpdateSets.length + 1, total: parsedUpdateSets.length + 1, name: parentName });
+                return {
+                    success: parsedUpdateSets.map(us => us.name),
+                    failed: [],
+                    parentSysId,
+                    parentName,
+                };
+            } catch (err) {
+                return {
+                    success: [],
+                    failed: [{ name: `Batch: ${parentName}`, error: err.message }],
+                };
+            }
+        }
+
+        const results = { success: [], failed: [], importedSysIds: [] };
+        for (let i = 0; i < parsedUpdateSets.length; i++) {
+            const us = parsedUpdateSets[i];
+            progressCallback({ current: i + 1, total: parsedUpdateSets.length, name: us.name });
+            try {
+                await this.uploadXml(us.rawXml, us.filename || `${us.name}.xml`);
+                results.success.push(us.name);
+                results.importedSysIds.push(us.remoteUpdateSetSysId);
+            } catch (err) {
+                console.error(`Import failed for ${us.name}:`, err);
+                results.failed.push({ name: us.name, error: err.message });
+            }
+        }
+        return results;
+    }
+
+    buildBatchXml(parsedUpdateSets, parentName, parentSysId) {
+        const now = new Date().toISOString().replace('T', ' ').split('.')[0];
+        const description = `Bulk import parent containing ${parsedUpdateSets.length} update set${parsedUpdateSets.length !== 1 ? 's' : ''}`;
+
+        // Parent sys_remote_update_set — remote_base_update_set points to its own sys_id
+        const parentRus = [
+            '<sys_remote_update_set action="INSERT_OR_UPDATE">',
+            '<application display_value="Global">global</application>',
+            '<application_name>Global</application_name>',
+            '<application_scope>global</application_scope>',
+            '<application_version/>',
+            '<collisions/>',
+            '<commit_date/>',
+            '<deleted/>',
+            `<description>${this.escapeXml(description)}</description>`,
+            '<inserted/>',
+            `<name>${this.escapeXml(parentName)}</name>`,
+            '<origin_sys_id/>',
+            '<parent display_value=""/>',
+            '<release_date/>',
+            `<remote_base_update_set display_value="${this.escapeXml(parentName)}">${parentSysId}</remote_base_update_set>`,
+            '<remote_parent_id/>',
+            `<remote_sys_id>${parentSysId}</remote_sys_id>`,
+            '<state>loaded</state>',
+            '<summary/>',
+            '<sys_class_name>sys_remote_update_set</sys_class_name>',
+            '<sys_created_by>admin</sys_created_by>',
+            `<sys_created_on>${now}</sys_created_on>`,
+            `<sys_id>${parentSysId}</sys_id>`,
+            '<sys_mod_count>1</sys_mod_count>',
+            '<sys_updated_by>admin</sys_updated_by>',
+            `<sys_updated_on>${now}</sys_updated_on>`,
+            '<update_set display_value=""/>',
+            '<update_source display_value=""/>',
+            '<updated/>',
+            '</sys_remote_update_set>',
+        ].join('\n');
+
+        const lines = [
+            '<?xml version="1.0" encoding="UTF-8"?>',
+            `<unload unload_date="${now}">`,
+            parentRus,
+        ];
+
+        // Each child: sys_remote_update_set with remote_base_update_set → parent's sys_id,
+        // state=in_hierarchy, then all its sys_update_xml records
+        for (const parsed of parsedUpdateSets) {
+            const childSysId = this.generateUUID();
+            const childRus = [
+                '<sys_remote_update_set action="INSERT_OR_UPDATE">',
+                `<application display_value="${this.escapeXml(parsed.application || 'Global')}">${this.escapeXml(parsed.applicationScope || 'global')}</application>`,
+                `<application_name>${this.escapeXml(parsed.application)}</application_name>`,
+                `<application_scope>${this.escapeXml(parsed.applicationScope || 'global')}</application_scope>`,
+                '<application_version/>',
+                '<collisions/>',
+                '<commit_date/>',
+                '<deleted/>',
+                `<description>${this.escapeXml(parsed.description || '')}</description>`,
+                '<inserted/>',
+                `<name>${this.escapeXml(parsed.name)}</name>`,
+                '<origin_sys_id/>',
+                `<parent display_value="${this.escapeXml(parentName)}">${parentSysId}</parent>`,
+                '<release_date/>',
+                `<remote_base_update_set display_value="${this.escapeXml(parentName)}">${parentSysId}</remote_base_update_set>`,
+                '<remote_parent_id/>',
+                `<remote_sys_id>${parsed.remoteSysId || childSysId}</remote_sys_id>`,
+                '<state>in_hierarchy</state>',
+                '<summary/>',
+                '<sys_class_name>sys_remote_update_set</sys_class_name>',
+                `<sys_created_by>${this.escapeXml(parsed.createdBy || 'admin')}</sys_created_by>`,
+                `<sys_created_on>${this.escapeXml(parsed.createdOn || now)}</sys_created_on>`,
+                `<sys_id>${childSysId}</sys_id>`,
+                '<sys_mod_count>0</sys_mod_count>',
+                `<sys_updated_by>${this.escapeXml(parsed.createdBy || 'admin')}</sys_updated_by>`,
+                `<sys_updated_on>${now}</sys_updated_on>`,
+                '<update_set display_value=""/>',
+                '<update_source display_value=""/>',
+                '<updated/>',
+                '</sys_remote_update_set>',
+            ].join('\n');
+
+            lines.push(childRus);
+
+            for (const ux of parsed.updateXmlRecords) {
+                lines.push('<sys_update_xml action="INSERT_OR_UPDATE">');
+                lines.push(`<action>${this.escapeXml(ux.action)}</action>`);
+                lines.push(`<application display_value="${this.escapeXml(ux.applicationDisplayValue || 'Global')}">${this.escapeXml(ux.application || 'global')}</application>`);
+                lines.push(`<category>${this.escapeXml(ux.category)}</category>`);
+                lines.push(`<name>${this.escapeXml(ux.name)}</name>`);
+                if (ux.payload) {
+                    lines.push(`<payload>${this.escapeXml(ux.payload)}</payload>`);
+                } else {
+                    lines.push('<payload/>');
+                }
+                if (ux.payloadHash) lines.push(`<payload_hash>${this.escapeXml(ux.payloadHash)}</payload_hash>`);
+                lines.push(`<remote_update_set display_value="${this.escapeXml(parsed.name)}">${childSysId}</remote_update_set>`);
+                lines.push('<replace_on_upgrade>false</replace_on_upgrade>');
+                if (ux.createdBy) lines.push(`<sys_created_by>${this.escapeXml(ux.createdBy)}</sys_created_by>`);
+                if (ux.createdOn) lines.push(`<sys_created_on>${this.escapeXml(ux.createdOn)}</sys_created_on>`);
+                lines.push(`<sys_id>${this.escapeXml(ux.sysId)}</sys_id>`);
+                if (ux.updatedBy) lines.push(`<sys_updated_by>${this.escapeXml(ux.updatedBy)}</sys_updated_by>`);
+                if (ux.updatedOn) lines.push(`<sys_updated_on>${this.escapeXml(ux.updatedOn)}</sys_updated_on>`);
+                if (ux.recordedAt) lines.push(`<sys_recorded_at>${this.escapeXml(ux.recordedAt)}</sys_recorded_at>`);
+                lines.push(`<table>${this.escapeXml(ux.table)}</table>`);
+                lines.push(`<target_name>${this.escapeXml(ux.targetName)}</target_name>`);
+                lines.push(`<type>${this.escapeXml(ux.type)}</type>`);
+                lines.push(`<update_domain>${this.escapeXml(ux.updateDomain)}</update_domain>`);
+                if (ux.updateGuid) lines.push(`<update_guid>${this.escapeXml(ux.updateGuid)}</update_guid>`);
+                if (ux.updateGuidHistory) lines.push(`<update_guid_history>${this.escapeXml(ux.updateGuidHistory)}</update_guid_history>`);
+                if (ux.view) lines.push(`<view>${this.escapeXml(ux.view)}</view>`);
+                lines.push('</sys_update_xml>');
+            }
+        }
+
+        lines.push('</unload>');
+        return lines.join('\n');
+    }
+    async uploadXml(xmlContent, filename) {
+        const formData = new FormData();
+        formData.append('sysparm_referring_url', 'sys_remote_update_set_list.do?sysparm_fixed_query=sys_class_name=sys_remote_update_set');
+        formData.append('sysparm_target', 'sys_remote_update_set');
+        formData.append('attachFile', new Blob([xmlContent], { type: 'text/xml' }), filename);
+
+        const res = await fetch('/sys_upload.do', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-UserToken': window.g_ck },
+            credentials: 'include',
+        });
+
+        if (!res.ok) {
+            const text = await res.text().catch(() => '');
+            throw new Error(`Upload failed: HTTP ${res.status} ${text.slice(0, 200)}`);
+        }
+
+        // /sys_upload.do redirects (302) to sys_remote_update_set_list.do on success.
+        // Browser auto-follows; check final URL.
+        if (res.url && !/sys_remote_update_set/.test(res.url)) {
+            const text = await res.text().catch(() => '');
+            if (/error|exception|failed/i.test(text)) {
+                throw new Error(`Upload appears to have failed (redirected to ${res.url})`);
+            }
+        }
+    }
+
     logActivity(action, details) {
         try {
             const logData = {
