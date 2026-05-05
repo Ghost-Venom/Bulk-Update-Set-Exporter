@@ -255,6 +255,21 @@ function buildRemoteUpdateSet(remoteUpdateSetSysId, name) {
     }
     fs.mkdirSync(RELEASES_DIR, { recursive: true });
 
+    const ARCHIVE_DIR = path.join(RELEASES_DIR, 'archive');
+    fs.mkdirSync(ARCHIVE_DIR, { recursive: true });
+
+    // Move any existing release XMLs into the archive folder so only
+    // the current release lives at the root of releases/.
+    for (const f of fs.readdirSync(RELEASES_DIR)) {
+        if (f.endsWith('.xml')) {
+            const oldPath = path.join(RELEASES_DIR, f);
+            const newPath = path.join(ARCHIVE_DIR, f);
+            if (!fs.existsSync(newPath)) {
+                fs.renameSync(oldPath, newPath);
+            }
+        }
+    }
+
     const remoteUpdateSetSysId = uuid();
     const remoteUpdateSetName = `${APP_NAME} v${VERSION}`;
 
